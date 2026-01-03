@@ -1,28 +1,40 @@
 
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { CURRENT_TIMESTAMP } from "src/utils/constants";
+import { UserType } from "src/utils/enums";
+import { Product } from "src/products/product.entity";
+import { Review } from "src/reviews/review.entity";
 
 @Entity({ name: 'users' })
 export class User {
 
-
-    @PrimaryGeneratedColumn()
+    @PrimaryGeneratedColumn("uuid")
     id: number
 
-    @Column()
-    firstName: string
+    @Column({ type: "varchar", length: "50", nullable: true })
+    userName: string
 
-    @Column()
-    lastName: string
+    @Column({ type: 'enum', enum: UserType, default: UserType.USER })
+    userType: string
 
-    @Column()
+    @Column({ default: false })
+    isAccountVerified: boolean
+
+    @Column({ type: 'varchar', length: "200", unique: true })
     email: string
 
     @Column()
     password: string
 
-    @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP(6)" })
+    @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })
     createdAt: Date
 
-    @UpdateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP(6)", onUpdate: 'CURRENT_TIMESTAMP(6)' })
+    @UpdateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP, onUpdate: CURRENT_TIMESTAMP })
     updatedAt: Date
+
+    @OneToMany(() => Product, (product) => product.user)
+    products: Product[]
+
+    @OneToMany(() => Review, (review) => review.user)
+    reviews: Review[]
 }
