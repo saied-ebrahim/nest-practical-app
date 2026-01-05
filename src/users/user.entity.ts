@@ -4,11 +4,12 @@ import { CURRENT_TIMESTAMP } from "src/utils/constants";
 import { UserType } from "src/utils/enums";
 import { Product } from "src/products/product.entity";
 import { Review } from "src/reviews/review.entity";
+import { Exclude } from "class-transformer";
 
 @Entity({ name: 'users' })
 export class User {
 
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn()
     id: number
 
     @Column({ type: "varchar", length: "50", nullable: true })
@@ -24,6 +25,7 @@ export class User {
     email: string
 
     @Column()
+    @Exclude()
     password: string
 
     @CreateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP })

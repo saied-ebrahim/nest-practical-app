@@ -7,20 +7,15 @@ export class UpdateUserDto {
     @Length(3, 50)
     userName?: string;
 
-    
-
-    @IsNotEmpty()
-    @IsOptional()
-    @IsEmail()
-    email?: string
-
-
 
     @IsNotEmpty()
     @IsOptional()
     @IsStrongPassword({
-        minLength: 10,
         minNumbers: 2,
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minSymbols: 1,
     }, {
         message: 'Password is too weak. It must be at least 10 characters long and contain at least 2 numbers.',
     })

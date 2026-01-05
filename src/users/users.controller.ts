@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get,  HttpCode, HttpStatus, Param, Post, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Put, UseGuards } from "@nestjs/common";
 import { UsersService } from "./users.service";
 import { RegisterDto } from "./dtos/register.dto";
 import { UpdateUserDto } from "./dtos/update-user.dto";
@@ -6,6 +6,9 @@ import { LoginDto } from "./dtos/login.dto";
 import { AuthGuard } from "./guards/auth.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import type { JWTPayloadType } from "src/utils/types";
+import { Roles } from "./decorators/user-role.decorator";
+import { UserType } from "src/utils/enums";
+import { AuthRolesGuard } from "./guards/auth-roles.guard";
 
 @Controller("api/users")
 export class UsersController {
@@ -26,21 +29,24 @@ export class UsersController {
     public getCurrentUser(@CurrentUser() payload: JWTPayloadType) {
         return this.usersService.getCurrentUser(payload.id)
     }
-    @Get("auth/users")
+    @Get()
+    @Roles(UserType.ADMIN)
+    @UseGuards(AuthRolesGuard)
     public getAllUsers() {
         return this.usersService.getAll()
     }
-    @Get("auth/users/:id")
-    public getUserById(@Param("id") id: number) {
-        return this.usersService.getOneBy(id)
-    }
 
-    @Put("auth/users/:id")
-    public updateUser(@Param("id") id: number, @Body() body: UpdateUserDto) {
-        return this.usersService.update(id, body)
+
+    @Put()
+    @Roles(UserType.ADMIN, UserType.USER)
+    @UseGuards(AuthRolesGuard)
+    public updateUser(@CurrentUser() payload: JWTPayloadType, @Body() body: UpdateUserDto) {
+        return this.usersService.update(payload.id, body)
     }
-    @Delete("auth/products/:id")
-    public deleteUser(@Param("id") id: number) {
-        return this.usersService.delete(id)
+    @Delete(":id")
+    @Roles(UserType.ADMIN, UserType.USER)
+    @UseGuards(AuthRolesGuard)
+    public deleteUser(@Param("id", ParseIntPipe) id: number, @CurrentUser() payload: JWTPayloadType) {
+        return this.usersService.delete(id, payload)
     }
 }
