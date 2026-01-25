@@ -7,7 +7,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity({ name: "products" })
 export class Product {
 
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn()
     id: number
 
 
@@ -27,10 +27,10 @@ export class Product {
     @UpdateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP, onUpdate: CURRENT_TIMESTAMP })
     updatedAt: Date
 
-    @ManyToOne(() => User, (user) => user.products)
-    user: User
 
-    @OneToMany(() => Review, (review) => review.product)
+    @OneToMany(() => Review, (review) => review.product, { eager: true })
     reviews: Review[]
 
+    @ManyToOne(() => User, (user) => user.products, { eager: true })
+    user: User
 }

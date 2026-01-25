@@ -6,11 +6,11 @@ import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGenerate
 
 @Entity({ name: "reviews" })
 export class Review {
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn()
     id: number
 
     @Column({ type: "int" })
-    rating: string
+    rating: number
 
     @Column()
     comment: string
@@ -27,7 +27,7 @@ export class Review {
     product: Product
 
 
-    @ManyToOne(() => User, (user) => user.reviews)
+    @ManyToOne(() => User, (user) => user.reviews, { eager: true })
     user: User
 
 }

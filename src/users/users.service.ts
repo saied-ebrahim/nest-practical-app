@@ -4,57 +4,58 @@ import { UpdateUserDto } from "./dtos/update-user.dto";
 import { Repository } from "typeorm";
 import { User } from "./user.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import * as bcrypt from 'bcryptjs'
 import { LoginDto } from "./dtos/login.dto";
-import { JwtService } from "@nestjs/jwt";
 import { AccessTokenType, JWTPayloadType } from "src/utils/types";
 import { UserType } from "src/utils/enums";
+import { AuthProvider } from "./auth.provider";
+import { join } from "node:path";
+import { cwd } from "node:process";
+import { unlinkSync } from "node:fs";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User) private readonly usersRepository: Repository<User>,
-        private readonly jwtService: JwtService) { }
+        private readonly authProvider: AuthProvider,
+        private readonly jwtService: JwtService,
+        private readonly config: ConfigService
 
-    /**
-     * Create New user
-     * @param registerDto data for creating user 
-     * @returns jwt (access token)
-     */
-    public async register(registerDto: RegisterDto): Promise<AccessTokenType> {
-        const { email, password, userName } = registerDto;
-        const userFromDb = await this.usersRepository.findOne({ where: { email } })
-        if (userFromDb) throw new BadRequestException("user already exist")
+    ) { }
 
-        const hashedPassword = await this.hashPassword(password)
-
-        let newUser = this.usersRepository.create({
-            email,
-            userName,
-            password: hashedPassword
-        })
-        newUser = await this.usersRepository.save(newUser)
-        const accessToken = await this.generateJWT({ id: newUser.id, userType: newUser.userType })
-
-        return { accessToken }
+    public async register(registerDto: RegisterDto) {
+        return this.authProvider.register(registerDto)
     }
 
 
-    /**
-     * log in 
-     * @param loginDto data for login 
-     * @returns JWT (access token)
-     */
-    public async login(loginDto: LoginDto): Promise<AccessTokenType> {
-        const { email, password } = loginDto
-        const user = await this.usersRepository.findOne({ where: { email } })
-        if (!user) throw new BadRequestException("invalid email or password ")
-        const passwordCheck = await bcrypt.compare(password, user.password)
-        if (!passwordCheck) throw new BadRequestException("invalid email or password ")
-        const accessToken = await this.generateJWT({ id: user.id, userType: user.userType })
-
-        return { accessToken }
+    public async login(loginDto: LoginDto) {
+        return this.authProvider.login(loginDto)
     }
+
+
+    public async verifyEmail(id: number, token: string) {
+        try {
+            // const payload = await this.jwtService.verifyAsync(token, {
+            //     secret: this.config.get('JWT_SECRET'),
+            // });
+            // const userId = payload.id;
+            const user = await this.usersRepository.findOne({ where: { id } });
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+            if (user.verificationToken !== token) {
+                throw new BadRequestException('Invalid or expired verification token');
+            }
+            user.isAccountVerified = true;
+            user.verificationToken = null;
+            await this.usersRepository.save(user);
+            return { message: 'Email verified successfully. You can now login.' };
+        } catch (error) {
+            throw new BadRequestException('Invalid or expired token');
+        }
+    }
+
 
     public async getCurrentUser(id: number): Promise<User> {
         const user = await this.usersRepository.findOne({ where: { id } })
@@ -75,7 +76,7 @@ export class UsersService {
         if (!user) throw new NotFoundException("User Not Found")
         user.userName = userName ?? user.userName
         if (password) {
-            user.password = await this.hashPassword(password)
+            user.password = await this.authProvider.hashPassword(password)
         }
 
         return this.usersRepository.save(user)
@@ -93,16 +94,29 @@ export class UsersService {
 
     }
 
-
-
-
-    private async generateJWT(payload: JWTPayloadType): Promise<string> {
-
-        return this.jwtService.signAsync(payload)
+    public async setProfileImage(userId: number, newProfileImage: string) {
+        const user = await this.getCurrentUser(userId)
+        if (user.profileImage === null) {
+            user.profileImage = newProfileImage
+        } else {
+            await this.removeProfileImage(userId)
+            user.profileImage = newProfileImage
+        }
+        return this.usersRepository.save(user)
     }
 
-    private async hashPassword(password: string): Promise<string> {
-        const salt = await bcrypt.genSalt(10)
-        return await bcrypt.hash(password, salt)
+    public async removeProfileImage(userId: number) {
+        console.log("user")
+        const user = await this.getCurrentUser(userId)
+        console.log(user)
+
+        // if (user.profileImage === null)
+        //     throw new BadRequestException('there is no profile image')
+        const imagePath = join(cwd(), `./uploads/users/${user.profileImage}`)
+        console.log(imagePath)
+        unlinkSync(imagePath)
+        user.profileImage = null;
+        return this.usersRepository.save(user)
     }
+
 }

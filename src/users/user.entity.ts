@@ -21,6 +21,9 @@ export class User {
     @Column({ default: false })
     isAccountVerified: boolean
 
+    @Column({ type: 'varchar', nullable: true })
+    verificationToken: string | null
+
     @Column({ type: 'varchar', length: "200", unique: true })
     email: string
 
@@ -33,6 +36,9 @@ export class User {
 
     @UpdateDateColumn({ type: "timestamp", default: () => CURRENT_TIMESTAMP, onUpdate: CURRENT_TIMESTAMP })
     updatedAt: Date
+
+    @Column({ type: 'varchar', nullable: true, default: null })
+    profileImage: string | null
 
     @OneToMany(() => Product, (product) => product.user)
     products: Product[]
