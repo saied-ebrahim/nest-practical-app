@@ -24,6 +24,10 @@ export class User {
     @Column({ type: 'varchar', nullable: true })
     verificationToken: string | null
 
+
+    @Column({ type: 'varchar', nullable: true })
+    resetPasswordToken: string | null
+
     @Column({ type: 'varchar', length: "200", unique: true })
     email: string
 

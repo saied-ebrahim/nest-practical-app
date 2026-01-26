@@ -30,7 +30,7 @@ export class MailService {
         }
     }
 
-    public async sendVerifyEmail(email: string, link: string) {
+    public async sendVerifyEmailTemplate(email: string, link: string) {
         try {
 
             await this.mailerService.sendMail({
@@ -41,6 +41,25 @@ export class MailService {
                     // Data to be sent to the EJS file
                     userName: email.split('@')[0],
                     link,
+                    year: new Date().getFullYear()
+                },
+            });
+
+        } catch (error) {
+            console.log('Email Error:', error);
+            throw new RequestTimeoutException('Failed to send email');
+        }
+    }
+    public async sendResetPasswordEmailTemplate(email: string, resetPasswordLink: string) {
+        try {
+
+            await this.mailerService.sendMail({
+                to: email, from: '"TOSKA" <no-reply@toska.com>',
+                subject: `Reset-Password Email Notification`,
+                template: 'reset-password', // Name of the file without extension
+                context: {
+                    // Data to be sent to the EJS file
+                    resetPasswordLink,
                     year: new Date().getFullYear()
                 },
             });

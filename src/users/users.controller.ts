@@ -11,6 +11,8 @@ import { UserType } from "src/utils/enums";
 import { AuthRolesGuard } from "./guards/auth-roles.guard";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
+import { ResetPasswordDto } from "./dtos/reset-password.dto";
+import { ForgetPasswordDto } from "./dtos/forget-password.dto";
 
 @Controller("api/users")
 export class UsersController {
@@ -32,6 +34,28 @@ export class UsersController {
         @Param('id', ParseIntPipe) id: number,
         @Param('token') token: string) {
         return this.usersService.verifyEmail(id, token)
+    }
+
+
+    @Post('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    public sendResetEmail(
+        @Body() body: ForgetPasswordDto,
+    ) {
+        return this.usersService.sendResetPassword(body.email)
+    }
+
+    @Get('reset-password/:id/:resetPasswordToken')
+    public getResetPassword(
+        @Param('id', ParseIntPipe) id: number,
+        @Param('resetPasswordToken') resetPasswordToken: string,
+    ) {
+        return this.usersService.getResetPassword(id, resetPasswordToken)
+    }
+
+    @Post('reset-password')
+    public resetPassword(@Body() body: ResetPasswordDto) {
+        return this.usersService.resetPassword(body)
     }
 
     @Get("current-user")

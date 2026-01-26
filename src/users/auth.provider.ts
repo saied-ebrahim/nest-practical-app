@@ -8,10 +8,11 @@ import { InjectRepository } from "@nestjs/typeorm";
 import * as bcrypt from 'bcryptjs'
 import { LoginDto } from "./dtos/login.dto";
 import { JwtService } from "@nestjs/jwt";
-import { AccessTokenType, JWTPayloadType } from "src/utils/types";
+import { JWTPayloadType } from "src/utils/types";
 import { MailService } from "src/mail/mail.service";
 import { randomBytes } from "node:crypto";
 import { ConfigService } from "@nestjs/config";
+import { ResetPasswordDto } from "./dtos/reset-password.dto";
 
 @Injectable()
 export class AuthProvider {
@@ -43,7 +44,7 @@ export class AuthProvider {
         newUser.verificationToken = randomBytes(32).toString('hex')
         await this.usersRepository.save(newUser);
         const link = this.generateLink(newUser.id, newUser.verificationToken)
-        await this.mailService.sendVerifyEmail(email, link)
+        await this.mailService.sendVerifyEmailTemplate(email, link)
         return { message: 'verification email sent successfully, please verify your email' }
     }
 
@@ -70,7 +71,7 @@ export class AuthProvider {
                 verificationToken = result.verificationToken
             }
             const link = this.generateLink(user.id, verificationToken)
-            await this.mailService.sendVerifyEmail(email, link)
+            await this.mailService.sendVerifyEmailTemplate(email, link)
             return { message: 'verification email sent successfully, please verify your email' }
         }
 
@@ -80,7 +81,46 @@ export class AuthProvider {
         return { accessToken }
     }
 
+    public async sendResetPasswordLink(email: string) {
+        const user = await this.usersRepository.findOne({ where: { email } })
+        if (!user) throw new BadRequestException("user with this email not found")
 
+        user.resetPasswordToken = randomBytes(32).toString('hex')
+        const result = await this.usersRepository.save(user)
+        const resetPasswordLink = `${this.config.get<string>("CLIENT_DOMAIN")}/reset-password/${user.id}/${result.resetPasswordToken}`
+        await this.mailService.sendResetPasswordEmailTemplate(email, resetPasswordLink)
+        return { message: "Password reset link sent to your email, check your inbox" }
+    }
+
+    /**
+    * 
+    * @param userId
+    * @param resetPasswordToken
+    * @returns
+    */
+    public async getResetPasswordLink(userId: number, resetPasswordToken: string) {
+        const user = await this.usersRepository.findOne({ where: { id: userId } })
+        if (!user) throw new BadRequestException('user with this email not found')
+
+        if (user.resetPasswordToken === null || user.resetPasswordToken !== resetPasswordToken)
+            throw new BadRequestException("invalid link")
+
+        return { message: 'valid link' }
+    }
+
+    public async resetPassword(dto: ResetPasswordDto) {
+        const { newPassword, resetPasswordToken, userId } = dto
+        const user = await this.usersRepository.findOne({ where: { id: userId } })
+        if (!user) throw new BadRequestException('user with this email not found')
+
+        if (user.resetPasswordToken === null || user.resetPasswordToken !== resetPasswordToken)
+            throw new BadRequestException("invalid link")
+        const hashedPassword = await this.hashPassword(newPassword)
+        user.password = hashedPassword
+        user.resetPasswordToken = null
+        await this.usersRepository.save(user)
+        return { message: "password reset successfully , please log in " }
+    }
 
 
     public async hashPassword(password: string): Promise<string> {

@@ -11,17 +11,13 @@ import { AuthProvider } from "./auth.provider";
 import { join } from "node:path";
 import { cwd } from "node:process";
 import { unlinkSync } from "node:fs";
-import { JwtService } from "@nestjs/jwt";
-import { ConfigService } from "@nestjs/config";
+import { ResetPasswordDto } from "./dtos/reset-password.dto";
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User) private readonly usersRepository: Repository<User>,
         private readonly authProvider: AuthProvider,
-        private readonly jwtService: JwtService,
-        private readonly config: ConfigService
-
     ) { }
 
     public async register(registerDto: RegisterDto) {
@@ -32,7 +28,16 @@ export class UsersService {
     public async login(loginDto: LoginDto) {
         return this.authProvider.login(loginDto)
     }
+    public async sendResetPassword(email: string) {
+        return this.authProvider.sendResetPasswordLink(email)
+    }
+    public getResetPassword(userId: number, resetPasswordToken: string) {
+        return this.authProvider.getResetPasswordLink(userId, resetPasswordToken)
+    }
 
+    public resetPassword(dto: ResetPasswordDto) {
+        return this.authProvider.resetPassword(dto)
+    }
 
     public async verifyEmail(id: number, token: string) {
         try {
